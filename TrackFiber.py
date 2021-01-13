@@ -15,43 +15,44 @@ frames_right,fps_right,size_right = utils.VideoCaptureData(video_right)
 
 
 #%% Tracking loop
-# erode, and dilate kernels
-erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-
-# define background subtractor
-bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
-
 # define movies
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
-mog_writer = cv2.VideoWriter('results MOG track/mog.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
-frame_writer = cv2.VideoWriter('results MOG track/frame.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
+frame_writer = cv2.VideoWriter('results MeanShift track/frame.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
 
 
 for i in tqdm(range(len(frames_left)-1)):
     frame = frames_left[i]
-    # background subtractor and threshold the image
-    fg_mask = bg_subtractor.apply(frame)
-    _, thresh = cv2.threshold(fg_mask, 244, 255, cv2.THRESH_BINARY)
+    # Define an initial tracking window in the center of the frame.
+    if i == 0:
+        r = cv2.selectROI(frame)
+        roi = frame[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
+        track_window = (r)
+        
+        # calculate histogram and normalize the histogram
+        mask = None
+        roi_hist = cv2.calcHist([roi], [0], mask, [180], [0, 180])
+        cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
+        
+        # Define the termination criteria:
+        # 10 iterations or convergence within 1-pixel radius.
+        term_crit = (cv2.TERM_CRITERIA_COUNT , 10, 1)
+        continue
     
-    # binary operations
-    cv2.erode(thresh, erode_kernel, thresh, iterations=2)
-    cv2.dilate(thresh, dilate_kernel, thresh, iterations=2)
+    # take in grayscale image and claculate back projection
+    back_proj = cv2.calcBackProject([frame], [0], roi_hist, [0, 180], 1)
     
-    # find and plot changes with rectangles
-    contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-    for c in contours:
-        if cv2.contourArea(c) > 1000:
-            x, y, w, h = cv2.boundingRect(c)
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 255, 0), 2)
+    # Perform tracking with MeanShift.
+    num_iters, track_window = cv2.meanShift(back_proj, track_window, term_crit)
+    
+    # Draw the tracking window.
+    x, y, w, h = track_window
+    cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
     
     # save images
-    mog_writer.write(cv2.cvtColor(fg_mask*255,cv2.COLOR_GRAY2BGR))
     frame_writer.write(frame)
     
     
     
-mog_writer.release()   
 frame_writer.release()   
  
 
