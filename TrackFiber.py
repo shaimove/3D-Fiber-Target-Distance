@@ -14,54 +14,57 @@ frames_left,fps_left,size_left = utils.VideoCaptureData(video_left)
 frames_right,fps_right,size_right = utils.VideoCaptureData(video_right)
 
 
-#%% start tracking
-# for the left video 
-plt.close('all')
-img0 = frames_left[0]
-img0 = img0[220:320,580:680]
+#%% Tracking loop
+# blur, erode, and dilate kernels
+BLUR_RADIUS = 21
+erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
 
-img = frames_right[0]
+# define movies
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+diff_writer = cv2.VideoWriter('results basic track/diff.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
+thresh_writer = cv2.VideoWriter('results basic track/thresh.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
+frame_writer = cv2.VideoWriter('results basic track/frame.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
 
-#%% create HOG descriptor
-hog = cv2.HOGDescriptor()
-hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
 
-# find matching area in the image
-found_rects, found_weights = hog.detectMultiScale(img,winStride=(4,4),
-                                                  scale=1.02,finalThreshold=1.9)
+for i in tqdm(range(len(frames_left)-1)):
+    frame = frames_left[i]
+    # take refference image
+    if i == 0:
+        # grayscale and blur
+        gray_background = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray_background = cv2.GaussianBlur(gray_background,(BLUR_RADIUS, BLUR_RADIUS), 0)
+        continue
+    
+    # take the current image
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray_frame = cv2.GaussianBlur(gray_frame,(BLUR_RADIUS, BLUR_RADIUS), 0)
+    
+    # find difference between current image to refference image and threshold
+    diff = cv2.absdiff(gray_background,gray_frame)
+    _, thresh = cv2.threshold(diff, 40, 255, cv2.THRESH_BINARY)
+    
+    # binary operations
+    cv2.erode(thresh, erode_kernel, thresh, iterations=2)
+    cv2.dilate(thresh, dilate_kernel, thresh, iterations=2)
+    
+    # find and plot changes with rectangles
+    contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    for c in contours:
+        if cv2.contourArea(c) > 4000:
+            x, y, w, h = cv2.boundingRect(c)
+            cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 255, 0), 2)
+    
+    # save images
+    diff_writer.write(cv2.cvtColor(diff*255,cv2.COLOR_GRAY2BGR))
+    thresh_writer.write(cv2.cvtColor(thresh*255,cv2.COLOR_GRAY2BGR))
+    frame_writer.write(frame)
+    
+    
+    
+diff_writer.release()   
+thresh_writer.release()  
+frame_writer.release()   
+ 
 
-#%% non-maximum suppression
-found_rects_filtered = []
-found_weights_filtered = []
-    
-for ri, r in enumerate(found_rects):
-    # 
-    for qi, q in enumerate(found_rects):
-        #
-        if ri != qi and utils.is_inside(r, q):
-            break
-        else:
-            found_rects_filtered.append(r)
-            found_weights_filtered.append(found_weights[ri])
-
-#%% print detection
-for ri, r in enumerate(found_rects_filtered):
-    x, y, w, h = r
-    cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 255), 2)
-    text = '%.2f' % found_weights_filtered[ri]
-    cv2.putText(img, text, (x, y - 20),cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-    
-cv2.imshow('Women in Hayfield Detected', img)
-cv2.imwrite('./women_in_hayfield_detected.jpg', img)
-cv2.waitKey(0)    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     

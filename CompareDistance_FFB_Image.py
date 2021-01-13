@@ -1,4 +1,6 @@
 # CompareDistance.py
+# create graph comparing the distance as measured the the FFB system and the 
+# output of the TEMA software
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd

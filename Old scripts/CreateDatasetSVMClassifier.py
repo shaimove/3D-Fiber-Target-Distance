@@ -1,4 +1,5 @@
 # CreateDataset.py
+# create dataset for SVM training
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt

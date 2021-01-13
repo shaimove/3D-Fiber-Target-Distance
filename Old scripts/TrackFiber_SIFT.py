@@ -105,6 +105,11 @@ svm.setC(50)
 svm.train(np.array(training_data), cv2.ml.ROW_SAMPLE,
           np.array(training_labels))
 
+svm = cv2.ml.SVM_create()
+svm.train(np.array(training_data), cv2.ml.ROW_SAMPLE,
+np.array(training_labels))
+svm.save('my_svm.xml')
+
 #%% Test images
 list_of_images = frames_left[:30]
 
