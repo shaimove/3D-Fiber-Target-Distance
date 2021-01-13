@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import utils
+from FiberClass import Fiber
 
 #%% define path
 folder = '../2 Results from demo 6.12.20 with MotionTech/3D Tracking/'
@@ -17,37 +18,31 @@ frames_right,fps_right,size_right = utils.VideoCaptureData(video_right)
 #%% Tracking loop
 # define movies
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
-frame_writer = cv2.VideoWriter('results MeanShift track/frame.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
+frame_writer = cv2.VideoWriter('results Kalman filter track/frame.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
 
 
 for i in tqdm(range(len(frames_left)-1)):
     frame = frames_left[i]
-    # Define an initial tracking window in the center of the frame.
+    # Iinitialize Fiber detection
     if i == 0:
+        # mark rectangle
         r = cv2.selectROI(frame)
         roi = frame[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
         track_window = (r)
+        cv2.destroyAllWindows()
         
-        # calculate histogram and normalize the histogram
-        mask = None
-        roi_hist = cv2.calcHist([roi], [0], mask, [180], [0, 180])
-        cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
+        # mark point
+        plt.imshow(frame)
+        pts = plt.ginput(3)
+        point = int(pts[0][0]),int(pts[0][1])
+        plt.close('all')
         
-        # Define the termination criteria:
-        # 10 iterations or convergence within 1-pixel radius.
-        term_crit = (cv2.TERM_CRITERIA_COUNT , 10, 1)
-        continue
-    
-    # take in grayscale image and claculate back projection
-    back_proj = cv2.calcBackProject([frame], [0], roi_hist, [0, 180], 1)
-    
-    # Perform tracking with MeanShift.
-    num_iters, track_window = cv2.meanShift(back_proj, track_window, term_crit)
-    
-    # Draw the tracking window.
-    x, y, w, h = track_window
-    cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
-    
+        # initialize Fiber 
+        fiber = Fiber(0,frame,track_window,point)
+        
+    # Update the tracking of the fiber.
+    fiber.update(frame)
+
     # save images
     frame_writer.write(frame)
     
@@ -55,5 +50,3 @@ for i in tqdm(range(len(frames_left)-1)):
     
 frame_writer.release()   
  
-
-    
