@@ -15,34 +15,24 @@ frames_right,fps_right,size_right = utils.VideoCaptureData(video_right)
 
 
 #%% Tracking loop
-# blur, erode, and dilate kernels
-BLUR_RADIUS = 21
-erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+# erode, and dilate kernels
+erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+
+# define background subtractor
+bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=True)
 
 # define movies
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
-diff_writer = cv2.VideoWriter('results basic track/diff.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
-thresh_writer = cv2.VideoWriter('results basic track/thresh.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
-frame_writer = cv2.VideoWriter('results basic track/frame.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
+mog_writer = cv2.VideoWriter('results MOG track/mog.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
+frame_writer = cv2.VideoWriter('results MOG track/frame.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
 
 
 for i in tqdm(range(len(frames_left)-1)):
     frame = frames_left[i]
-    # take refference image
-    if i == 0:
-        # grayscale and blur
-        gray_background = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray_background = cv2.GaussianBlur(gray_background,(BLUR_RADIUS, BLUR_RADIUS), 0)
-        continue
-    
-    # take the current image
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    gray_frame = cv2.GaussianBlur(gray_frame,(BLUR_RADIUS, BLUR_RADIUS), 0)
-    
-    # find difference between current image to refference image and threshold
-    diff = cv2.absdiff(gray_background,gray_frame)
-    _, thresh = cv2.threshold(diff, 40, 255, cv2.THRESH_BINARY)
+    # background subtractor and threshold the image
+    fg_mask = bg_subtractor.apply(frame)
+    _, thresh = cv2.threshold(fg_mask, 244, 255, cv2.THRESH_BINARY)
     
     # binary operations
     cv2.erode(thresh, erode_kernel, thresh, iterations=2)
@@ -51,19 +41,17 @@ for i in tqdm(range(len(frames_left)-1)):
     # find and plot changes with rectangles
     contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
     for c in contours:
-        if cv2.contourArea(c) > 4000:
+        if cv2.contourArea(c) > 1000:
             x, y, w, h = cv2.boundingRect(c)
             cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 255, 0), 2)
     
     # save images
-    diff_writer.write(cv2.cvtColor(diff*255,cv2.COLOR_GRAY2BGR))
-    thresh_writer.write(cv2.cvtColor(thresh*255,cv2.COLOR_GRAY2BGR))
+    mog_writer.write(cv2.cvtColor(fg_mask*255,cv2.COLOR_GRAY2BGR))
     frame_writer.write(frame)
     
     
     
-diff_writer.release()   
-thresh_writer.release()  
+mog_writer.release()   
 frame_writer.release()   
  
 
