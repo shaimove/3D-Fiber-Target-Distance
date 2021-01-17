@@ -15,7 +15,7 @@ frames_right,fps_right,size_right = utils.VideoCaptureData(video_right)
 
 # Define video to save
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
-frame_writer = cv2.VideoWriter('frame.avi', fourcc, 30.0, (frames_left[0].shape[:2]))
+frame_writer = cv2.VideoWriter('frame.avi', fourcc, 10.0, (frames_left[0].shape[:2]))
 
 
 #%% Step 2: Mark the tip of the fiber and it's ORB descriptor
@@ -29,13 +29,18 @@ plt.close('all')
 
 #%% Step 3: Initiate ORB detector
 orb = cv2.ORB_create()
+sift = cv2.xfeatures2d.SIFT_create()
 
-# find the keypoints with ORB for both first image and image with tip of the fiber
-kp0, des0 = orb.detectAndCompute(first_image, None)
+# find the keypoints with ORB/SIFT for both first image and image with tip of the fiber
+#kp0, des0 = orb.detectAndCompute(first_image, None)
+kp0, des0 = sift.detectAndCompute(first_image, None)
 
 # find closest point
 n_point,n_index,dist = utils.Find_Nearest_Point(point,kp0)
 refference_descriptor = np.expand_dims(des0[n_index], axis=0)
+#refference_descriptor = des0[n_index:n_index+1]
+
+
 
 
 #%% Step 4: Initiate Loop
@@ -55,6 +60,7 @@ previous_tip_fiber_detected = n_point
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
 # Define FLANN parameters
+# ORB parameters
 FLANN_INDEX_LSH = 6
 index_params= dict(algorithm = FLANN_INDEX_LSH,
                    table_number = 6, # 12
@@ -62,20 +68,29 @@ index_params= dict(algorithm = FLANN_INDEX_LSH,
                    multi_probe_level = 1) #2
 search_params = dict(checks=50)   # or pass empty dictionary
 
+# SIFT parameters
+FLANN_INDEX_KDTREE = 1
+index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+search_params = dict(checks=50)
+
+
 flann = cv2.FlannBasedMatcher(index_params,search_params)
 
 #%% Loop
 for i,frame in tqdm(enumerate(frames_left[0:-1])):
-    # crop the image using the point  given from previous iteration
-    image_crop,crop_points = utils.Crop_Image(frame,previous_tip_fiber_detected,window_size=200)
+    # crop the image using the point given from previous iteration, to limit area search
+    image_crop,crop_points = utils.Crop_Image(
+        frame,previous_tip_fiber_detected,window_size=200)
     
     # keypoints and descriptors from new image
     #kp1, des1 = orb.detectAndCompute(frame, None)
-    kp1, des1 = orb.detectAndCompute(image_crop, None)
+    #kp1, des1 = orb.detectAndCompute(image_crop, None)
+    kp1, des1 = sift.detectAndCompute(image_crop, None)
     
-    # Perform brute-force matching
+    # Perform brute-force/FLANN matching
     #matches = bf.match(refference_descriptor, des1)
-    matches = flann.knnMatch(refference_descriptor,des1,k=20)[0]
+    
+    matches = flann.knnMatch(refference_descriptor,des1,k=2)[0]
 
     # Create list of keypoints from matcher 
     new_keypoint_list = utils.Create_Keypoints_from_Matcher(matches,kp1)
@@ -101,6 +116,8 @@ for i,frame in tqdm(enumerate(frames_left[0:-1])):
     cv2.circle(img, (int(n_point[0]),int(n_point[1])), radius=5,color=(0, 0, 255),thickness=2)
     frame_writer.write(img)
     
+
+
 
 
 frame_writer.release()   
