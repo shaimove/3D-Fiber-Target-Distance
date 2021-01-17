@@ -34,8 +34,8 @@ orb = cv2.ORB_create()
 kp0, des0 = orb.detectAndCompute(first_image, None)
 
 # find closest point
-nearest_point,nearest_keypoint,index_nearest_point = utils.Find_Nearest_Point(point,kp0)
-refference_descriptor = np.expand_dims(des0[index_nearest_point], axis=0)
+n_point,n_keypoint,n_index,d = utils.Find_Nearest_Point(point,kp0)
+refference_descriptor = np.expand_dims(des0[n_index], axis=0)
 
 
 #%% Step 4: Initiate Loop
@@ -43,15 +43,28 @@ refference_descriptor = np.expand_dims(des0[index_nearest_point], axis=0)
 tip_fiber_detected = []
 key_points = []
 descriptors = []
+distances = []
 
 # append to list
-tip_fiber_detected.append(nearest_point)
-key_points.append(nearest_keypoint)
+tip_fiber_detected.append(n_point)
+key_points.append(n_keypoint)
 descriptors.append(refference_descriptor)
+distances.append(d)
 
-previous_tip_fiber_detected = nearest_point
+previous_tip_fiber_detected = n_point
+
 # Define brute-force matching.
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+# Define FLANN parameters
+FLANN_INDEX_LSH = 6
+index_params= dict(algorithm = FLANN_INDEX_LSH,
+                   table_number = 6, # 12
+                   key_size = 12,     # 20
+                   multi_probe_level = 1) #2
+search_params = dict(checks=50)   # or pass empty dictionary
+
+flann = cv2.FlannBasedMatcher(index_params,search_params)
 
 #%% Loop
 for i,frame in tqdm(enumerate(frames_left[0:-1])):
@@ -59,34 +72,56 @@ for i,frame in tqdm(enumerate(frames_left[0:-1])):
     kp1, des1 = orb.detectAndCompute(frame, None)
     
     # Perform brute-force matching
-    matches = bf.match(refference_descriptor, des1)
-    
-    # Create list of keypoints from matcher
+    #matches = bf.match(refference_descriptor, des1)
+    matches = flann.knnMatch(refference_descriptor,des1,k=20)[0]
+
+    # Create list of keypoints from matcher 
     new_keypoint_list = utils.Create_Keypoints_from_Matcher(matches,kp1)
     
     # find the closest point from matcher to previous tip_fiber_detected
-    nearest_point,nearest_keypoint,index_nearest_point = utils.Find_Nearest_Point(
+    n_point,n_keypoint,n_index,d = utils.Find_Nearest_Point(
         previous_tip_fiber_detected,new_keypoint_list)
     
     # take descriptor of new nearest_point
-    descriptor_detected = np.expand_dims(des1[index_nearest_point],axis=0)
+    descriptor_detected = np.expand_dims(des1[n_index],axis=0)
     
-    # append to lists
-    tip_fiber_detected.append(nearest_point)
-    key_points.append(nearest_keypoint)
-    descriptors.append(descriptor_detected)
-    
+    # append new values to lists
+    tip_fiber_detected.append(n_point); key_points.append(n_keypoint)
+    descriptors.append(descriptor_detected); distances.append(d)
+        
     # define descriptor for next iteration
     refference_descriptor = descriptor_detected
-    previous_tip_fiber_detected = nearest_point
-    
+    previous_tip_fiber_detected = n_point
+
+        
     # plot the tip of fiber and save to a movie
     img = frame.copy()
-    cv2.circle(img, (nearest_point[0],nearest_point[1]), radius=5, color=(0, 0, 255), thickness=1)
+    cv2.circle(img, (n_point[0],n_point[1]), radius=5, color=(0, 0, 255), thickness=2)
     frame_writer.write(img)
     
 
+
 frame_writer.release()   
+
+
+#%% Plot distance and travel
+travel_x,travel_y = np.array(tip_fiber_detected)[:,0],np.array(tip_fiber_detected)[:,0]
+distances = np.array(distances)
+
+plt.figure()
+plt.scatter(travel_x,travel_y); plt.title('Position in time')
+
+plt.figure()
+plt.plot(range(distances.shape[0]),distances); plt.title('Distance between consecutive frames')
+plt.xlabel('Time [a.u]'); plt.ylabel('Distance [a.u]'); plt.grid()
+
+
+
+
+
+
+
+
 
 
 

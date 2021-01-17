@@ -26,18 +26,19 @@ def VideoCaptureData(video_path):
 
 #%% Going over list of points from ORB and return the closet point in image
 
-def Find_Nearest_Point(point_to_detect,list_of_points):
+def Find_Nearest_Point(point_to_detect,list_of_points,min_distance=1000000):
     
     # Define loop variabels
     nearest_point = None
-    nearest_distance = 10000000
+    nearest_distance = min_distance
     index_nearest_point = None
     nearest_keypoint = None
     
     # Loop
     for i,point in enumerate(list_of_points):
         # calculate L2
-        distance = ((point_to_detect[0] - point.pt[0])**2 + (point_to_detect[1] - point.pt[1])**2)
+        distance = ((point_to_detect[0] - point.pt[0])**2 + 
+                    (point_to_detect[1] - point.pt[1])**2)**0.5
         
         # if we found shorter distance, update!
         if distance < nearest_distance:
@@ -46,7 +47,7 @@ def Find_Nearest_Point(point_to_detect,list_of_points):
             nearest_keypoint = list_of_points[i] # update keypoint
             nearest_distance = distance
     
-    return nearest_point,nearest_keypoint,index_nearest_point
+    return nearest_point,nearest_keypoint,index_nearest_point,nearest_distance
     
 
 
@@ -54,7 +55,7 @@ def Find_Nearest_Point(point_to_detect,list_of_points):
 
 def Create_Keypoints_from_Matcher(matches,keypoint_lists):
     # first, sort them by distance from descriptor
-    matches = sorted(matches, key=lambda x:x.distance)
+    #matches = sorted(matches, key=lambda x:x.distance)
     
     # list
     new_keypoint_list = []
