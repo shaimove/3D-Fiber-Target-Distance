@@ -24,17 +24,46 @@ def VideoCaptureData(video_path):
     
     return frames,fps,size
 
+#%% Going over list of points from ORB and return the closet point in image
 
-#%% find if one rectangle inside the other
-
-def is_inside(i, o):
-    # inner rectangle
-    ix, iy, iw, ih = i
-    # outter rectangle
-    ox, oy, ow, oh = o
+def Find_Nearest_Point(point_to_detect,list_of_points):
     
-    return ix > ox and ix + iw < ox + ow and \
-        iy > oy and iy + ih < oy + oh
+    # Define loop variabels
+    nearest_point = None
+    nearest_distance = 10000000
+    index_nearest_point = None
+    nearest_keypoint = None
+    
+    # Loop
+    for i,point in enumerate(list_of_points):
+        # calculate L2
+        distance = ((point_to_detect[0] - point.pt[0])**2 + (point_to_detect[1] - point.pt[1])**2)
+        
+        # if we found shorter distance, update!
+        if distance < nearest_distance:
+            nearest_point = int(point.pt[0]),int(point.pt[1]) # update (x,y)
+            index_nearest_point = i # update index
+            nearest_keypoint = list_of_points[i] # update keypoint
+            nearest_distance = distance
+    
+    return nearest_point,nearest_keypoint,index_nearest_point
+    
+
+
+#%% Create keypoint list from macther
+
+def Create_Keypoints_from_Matcher(matches,keypoint_lists):
+    # first, sort them by distance from descriptor
+    matches = sorted(matches, key=lambda x:x.distance)
+    
+    # list
+    new_keypoint_list = []
+    
+    for match in matches:
+        ind = match.trainIdx
+        new_keypoint_list.append(keypoint_lists[ind])
+    
+    return new_keypoint_list
 
 
 
