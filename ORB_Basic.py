@@ -34,22 +34,20 @@ orb = cv2.ORB_create()
 kp0, des0 = orb.detectAndCompute(first_image, None)
 
 # find closest point
-n_point,n_keypoint,n_index,d = utils.Find_Nearest_Point(point,kp0)
+n_point,n_index,dist = utils.Find_Nearest_Point(point,kp0)
 refference_descriptor = np.expand_dims(des0[n_index], axis=0)
 
 
 #%% Step 4: Initiate Loop
 # Define lists
 tip_fiber_detected = []
-key_points = []
 descriptors = []
 distances = []
 
 # append to list
 tip_fiber_detected.append(n_point)
-key_points.append(n_keypoint)
 descriptors.append(refference_descriptor)
-distances.append(d)
+distances.append(dist)
 
 previous_tip_fiber_detected = n_point
 
@@ -68,8 +66,12 @@ flann = cv2.FlannBasedMatcher(index_params,search_params)
 
 #%% Loop
 for i,frame in tqdm(enumerate(frames_left[0:-1])):
+    # crop the image using the point  given from previous iteration
+    image_crop,crop_points = utils.Crop_Image(frame,previous_tip_fiber_detected,window_size=200)
+    
     # keypoints and descriptors from new image
-    kp1, des1 = orb.detectAndCompute(frame, None)
+    #kp1, des1 = orb.detectAndCompute(frame, None)
+    kp1, des1 = orb.detectAndCompute(image_crop, None)
     
     # Perform brute-force matching
     #matches = bf.match(refference_descriptor, des1)
@@ -79,15 +81,15 @@ for i,frame in tqdm(enumerate(frames_left[0:-1])):
     new_keypoint_list = utils.Create_Keypoints_from_Matcher(matches,kp1)
     
     # find the closest point from matcher to previous tip_fiber_detected
-    n_point,n_keypoint,n_index,d = utils.Find_Nearest_Point(
-        previous_tip_fiber_detected,new_keypoint_list)
+    n_point,n_index,dist = utils.Find_Nearest_Point(
+        previous_tip_fiber_detected,new_keypoint_list,crop_points)
     
     # take descriptor of new nearest_point
     descriptor_detected = np.expand_dims(des1[n_index],axis=0)
     
     # append new values to lists
-    tip_fiber_detected.append(n_point); key_points.append(n_keypoint)
-    descriptors.append(descriptor_detected); distances.append(d)
+    tip_fiber_detected.append(n_point); 
+    descriptors.append(descriptor_detected); distances.append(dist)
         
     # define descriptor for next iteration
     refference_descriptor = descriptor_detected
@@ -96,7 +98,7 @@ for i,frame in tqdm(enumerate(frames_left[0:-1])):
         
     # plot the tip of fiber and save to a movie
     img = frame.copy()
-    cv2.circle(img, (n_point[0],n_point[1]), radius=5, color=(0, 0, 255), thickness=2)
+    cv2.circle(img, (int(n_point[0]),int(n_point[1])), radius=5,color=(0, 0, 255),thickness=2)
     frame_writer.write(img)
     
 
