@@ -29,18 +29,13 @@ plt.close('all')
 
 #%% Step 3: Initiate ORB detector
 orb = cv2.ORB_create()
-sift = cv2.xfeatures2d.SIFT_create()
 
 # find the keypoints with ORB/SIFT for both first image and image with tip of the fiber
-#kp0, des0 = orb.detectAndCompute(first_image, None)
-kp0, des0 = sift.detectAndCompute(first_image, None)
+kp0, des0 = orb.detectAndCompute(first_image, None)
 
 # find closest point
 n_point,n_index,dist = utils.Find_Nearest_Point(point,kp0)
 refference_descriptor = np.expand_dims(des0[n_index], axis=0)
-#refference_descriptor = des0[n_index:n_index+1]
-
-
 
 
 #%% Step 4: Initiate Loop
@@ -68,11 +63,6 @@ index_params= dict(algorithm = FLANN_INDEX_LSH,
                    multi_probe_level = 1) #2
 search_params = dict(checks=50)   # or pass empty dictionary
 
-# SIFT parameters
-FLANN_INDEX_KDTREE = 1
-index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-search_params = dict(checks=50)
-
 
 flann = cv2.FlannBasedMatcher(index_params,search_params)
 
@@ -84,13 +74,11 @@ for i,frame in tqdm(enumerate(frames_left[0:-1])):
     
     # keypoints and descriptors from new image
     #kp1, des1 = orb.detectAndCompute(frame, None)
-    #kp1, des1 = orb.detectAndCompute(image_crop, None)
-    kp1, des1 = sift.detectAndCompute(image_crop, None)
+    kp1, des1 = orb.detectAndCompute(image_crop, None)
     
     # Perform brute-force/FLANN matching
-    #matches = bf.match(refference_descriptor, des1)
-    
-    matches = flann.knnMatch(refference_descriptor,des1,k=2)[0]
+    matches = bf.match(refference_descriptor, des1)
+    #matches = flann.knnMatch(refference_descriptor,des1,k=2)[0]
 
     # Create list of keypoints from matcher 
     new_keypoint_list = utils.Create_Keypoints_from_Matcher(matches,kp1)
