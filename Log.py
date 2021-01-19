@@ -104,6 +104,10 @@ class TrackingLog(object):
         plt.xlabel('Epoch'); plt.ylabel('Loss'); plt.grid(); plt.legend()
         plt.title('Training and Validation L1 loss')
         
+        # save loss
+        filename = self.folder + 'loss.png'
+        plt.savefig(filename)
+        
         return None
     
     def SaveResultsLastEpoch(self,images,output,labels):

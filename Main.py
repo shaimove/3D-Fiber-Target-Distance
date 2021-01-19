@@ -45,14 +45,15 @@ validation_dataset = DatasetImage(data_validation,image_size,transform)
 validation_loader = data.DataLoader(validation_dataset,batch_size=batch_size_validation,shuffle=True)
 
 # Define logger parameters 
-folder = '../Model 1/'
+model_name = 'Version 2-19_01_2021.pt'
+folder = '../Model 1.2/'
 Logger = Log.TrackingLog(folder,image_size,(mean,std))
 
 
 #%% Step 3: Define model hyperparameters
 
 # number of epochs
-num_epochs = 20
+num_epochs = 100
 
 # load model
 model = model.TrackingModel().to(device)
@@ -104,7 +105,7 @@ for epoch in range(num_epochs):
         train_loss += loss.item()
         
         # update training log
-        print('Epoch %d, Batch %d/%d, loss: %.4f' % (epoch,i,len(train_loader),loss))
+        print('Epoch %d, Batch %d/%d, training loss: %.4f' % (epoch,i,len(train_loader),loss))
         Logger.BatchUpdate(mode='Training',epoch=epoch,batch=i,loss=loss)
         i += 1 # update index
 
@@ -137,7 +138,7 @@ for epoch in range(num_epochs):
             valid_loss += loss.item()
             
             # update validation log
-            print('Epoch %d, Batch %d/%d, loss: %.4f' % (epoch,i,len(validation_loader),loss))
+            print('Epoch %d, Batch %d/%d, validation loss: %.4f' % (epoch,i,len(validation_loader),loss))
             Logger.BatchUpdate(mode='Validation',epoch=epoch,batch=i,loss=loss)
             i += 1 # update index for log of batchs 
             
@@ -161,7 +162,7 @@ for epoch in range(num_epochs):
 #%% Step 5: print results and save the model
 Logger.PlotLoss()
 
-PATH = '../Model 1/Version 2-19_01_2021.pt'
+PATH = folder + model_name
 torch.save({'num_epochs': num_epochs,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
