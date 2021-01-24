@@ -66,7 +66,6 @@ optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 # define loss function 
 criterion = torch.nn.L1Loss()
 
-
 #%% Step 4: Training Loop
 
 

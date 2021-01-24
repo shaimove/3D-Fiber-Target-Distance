@@ -28,16 +28,16 @@ class TrackingModel(nn.Module):
         self.conv6 = ConvBlock(in_channels*256,in_channels*512)
         
         # from (N*4096) to (N*64)
-        self.linear1 = nn.Linear(in_channels*512*16*16, in_channels*16)
+        self.linear1 = nn.Linear(in_channels*512*16*16, in_channels*64)
         
         # bn after first linear
-        self.bn = nn.BatchNorm1d(in_channels*16)
+        self.bn = nn.BatchNorm1d(in_channels*64)
         
         # ReLU layer after first linear
         self.relu = nn.ReLU(inplace=True)
         
         # from (N*64) to (N*4)
-        self.linear2 = nn.Linear(in_channels*16, 2)
+        self.linear2 = nn.Linear(in_channels*64, 2)
         
         # Sigmoid layer after second linear
         self.sigmoid = nn.Sigmoid()

@@ -46,10 +46,10 @@ class DatasetImage(Dataset):
         
         # preform transforms
         if self.transform:
-            image = self.transform(image)
+            image = self.transform(image).float()
         
         # create dictionary
-        sample = {'image': image, 'label': torch.tensor([x_tip,y_tip])}
+        sample = {'image': image, 'label': torch.tensor([x_tip,y_tip]).float()}
         
         
         return sample
