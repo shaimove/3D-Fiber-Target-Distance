@@ -30,8 +30,8 @@ mean,std = utils.CalculateStats(data_train,image_size)
 
 
 #%% Step 2: Create dataset objects
-batch_size_train = 16
-batch_size_validation = 16
+batch_size_train = 32
+batch_size_validation = 32
 
 # define datatransforms
 transform = transforms.Compose([transforms.ToTensor(),
