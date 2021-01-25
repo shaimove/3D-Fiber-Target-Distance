@@ -6,6 +6,7 @@ import cv2
 import torch
 from torch.utils import data
 from torchvision import transforms
+from torchsummary import summary
 
 import model
 import utils
@@ -29,8 +30,8 @@ mean,std = utils.CalculateStats(data_train,image_size)
 
 
 #%% Step 2: Create dataset objects
-batch_size_train = 32
-batch_size_validation = 32
+batch_size_train = 16
+batch_size_validation = 16
 
 # define datatransforms
 transform = transforms.Compose([transforms.ToTensor(),
@@ -95,7 +96,7 @@ for epoch in range(num_epochs):
         loss = criterion(output,labels)
         
         # add L1 regularization
-        loss = loss + utils.Regularization(model,1,0.0001)
+        loss = loss + utils.Regularization(model,2,0.001)
         
         # backward: perform gradient descent of the loss w.r. to the model params
         loss.backward()
@@ -107,7 +108,7 @@ for epoch in range(num_epochs):
         train_loss += loss.item()
         
         # update training log
-        print('Epoch %d, Batch %d/%d, training loss: %.4f' % (epoch,i,len(train_loader),loss))
+        print('Epoch %d, Batch %d/%d, training loss: %.4f' % (epoch+1,i,len(train_loader),loss))
         Logger.BatchUpdate(mode='Training',epoch=epoch,batch=i,loss=loss)
         i += 1 # update index
 
@@ -140,7 +141,7 @@ for epoch in range(num_epochs):
             valid_loss += loss.item()
             
             # update validation log
-            print('Epoch %d, Batch %d/%d, validation loss: %.4f' % (epoch,i,len(validation_loader),loss))
+            print('Epoch %d, Batch %d/%d, validation loss: %.4f' % (epoch+1,i,len(validation_loader),loss))
             Logger.BatchUpdate(mode='Validation',epoch=epoch,batch=i,loss=loss)
             i += 1 # update index for log of batchs 
             
@@ -162,14 +163,19 @@ for epoch in range(num_epochs):
  
 
 #%% Step 5: print results and save the model
+# Plot Traing and Validation Loss graph
 Logger.PlotLoss()
+
+# Plot distribution of weights values, to detect high value
 weigths = utils.PlotWeightsHistogram(model)
 
+# model summary
+summary(model, images)
 
+# Svae the model
 PATH = folder + model_name
 torch.save({'num_epochs': num_epochs,
             'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
             'train_loss': Logger.training_loss_epoch,
             'valid_loss': Logger.validation_loss_epoch}, PATH)
 

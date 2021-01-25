@@ -27,8 +27,11 @@ class TrackingModel(nn.Module):
         # from (N,256,32,32) to (N,512,16,16)
         self.conv6 = ConvBlock(in_channels*256,in_channels*512)
         
-        # from (N*4096) to (N*64)
-        self.linear1 = nn.Linear(in_channels*512*16*16, in_channels*64)
+        # from (N,512,16,16) to (N,1024,8,8)
+        self.conv7 = ConvBlock(in_channels*512,in_channels*1024)
+        
+        # from (N*65,536) to (N*64)
+        self.linear1 = nn.Linear(in_channels*1024*8*8, in_channels*64)
         
         # bn after first linear
         self.bn = nn.BatchNorm1d(in_channels*64)
@@ -69,6 +72,7 @@ class TrackingModel(nn.Module):
         X = self.conv4(X)
         X = self.conv5(X)
         X = self.conv6(X)
+        X = self.conv7(X)
         
         X = X.view(X.size(0),-1) # flatten to 1D vector
         X = self.linear1(X)
@@ -86,16 +90,26 @@ class ConvBlock(nn.Module):
         super().__init__()
         # from (N*input_size*H*W) to (N*output_size*2,H/2,W/2)
         
+        # define conv + bn + relu
+        self.conv1 = nn.Conv2d(input_size,output_size,kernel_size=3,padding=1)
+        self.bn1 = nn.BatchNorm2d(output_size)
+        self.relu1 = nn.ReLU(inplace=True)
+        
         # define conv + bn + relu + maxpool
-        self.conv = nn.Conv2d(input_size,output_size,kernel_size=3,padding=1)
-        self.bn = nn.BatchNorm2d(output_size)
-        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(output_size,output_size,kernel_size=3,padding=1)
+        self.bn2 = nn.BatchNorm2d(output_size)
+        self.relu2 = nn.ReLU(inplace=True)
         self.max = nn.MaxPool2d(2,2)
         
     def forward(self, X):
-        X = self.conv(X)
-        X = self.bn(X)
-        X = self.relu(X)
+        X = self.conv1(X)
+        X = self.bn1(X)
+        X = self.relu1(X)
+        
+        X = self.conv2(X)
+        X = self.bn2(X)
+        X = self.relu2(X)
+        
         X = self.max(X)
         
         return X
