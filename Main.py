@@ -45,7 +45,7 @@ validation_dataset = DatasetImage(data_validation,image_size,transform)
 validation_loader = data.DataLoader(validation_dataset,batch_size=batch_size_validation,shuffle=True)
 
 # Define logger parameters 
-model_name = 'Version 2-19_01_2021.pt'
+model_name = 'Version 3-25_01_2021.pt'
 folder = '../Model 1.2/'
 Logger = Log.TrackingLog(folder,image_size,(mean,std))
 
@@ -53,7 +53,7 @@ Logger = Log.TrackingLog(folder,image_size,(mean,std))
 #%% Step 3: Define model hyperparameters
 
 # number of epochs
-num_epochs = 100
+num_epochs = 20
 
 # load model
 model = model.TrackingModel().to(device)
@@ -93,6 +93,9 @@ for epoch in range(num_epochs):
         
         # calculate the training batch loss
         loss = criterion(output,labels)
+        
+        # add L1 regularization
+        loss = loss + utils.Regularization(model,1,0.0001)
         
         # backward: perform gradient descent of the loss w.r. to the model params
         loss.backward()
@@ -160,11 +163,14 @@ for epoch in range(num_epochs):
 
 #%% Step 5: print results and save the model
 Logger.PlotLoss()
+weigths = utils.PlotWeightsHistogram(model)
+
 
 PATH = folder + model_name
 torch.save({'num_epochs': num_epochs,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-            'Logger': Logger}, PATH)
+            'train_loss': Logger.training_loss_epoch,
+            'valid_loss': Logger.validation_loss_epoch}, PATH)
 
 

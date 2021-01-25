@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
+import torch
 
 #%% function to read video files
 def VideoCaptureData(video_path):
@@ -60,6 +60,66 @@ def count_parameters(model):
     num_parmas = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print('Number of Parmaters of this Model is: %s parameters' % num_parmas)
     return None
+
+#%% L1/L2 Regularization
+
+def Regularization(model, regularization_type=1, gamma=0.0001):
+    '''
+    Add L1 or L2 Regularization loss to the function
+    Recommanded values: For L1 0.0001, For L2 0.01.
+
+    Parameters
+    ----------
+    model : CNN or RNN or ANN with parameters
+    regularization_type : interger, 1 or 2
+        if 1: L1 Regularization,   if 2: L2 Regularization. defualt is L1. 
+    gamma : float, gamma of loss function, defualt is 
+        coefficient of loss function, defualt is 0.0001.
+
+    Returns
+    -------
+    loss : float32
+        Loss due L1/L2 regularization.
+
+    '''
+    # initiate norm
+    norm = 0
+    
+    # run over all model parametes and accumalate the norm of the weights
+    for param in model.parameters():
+        norm += torch.norm(param,regularization_type)
+    
+    # multiply by coefficient
+    loss = gamma * norm
+    
+    return loss
+        
+#%% Plot histogram of weights
+
+def PlotWeightsHistogram(model):
+    # intiate vector of parameters
+    weigths = None
+    
+    # append all weights
+    for param in  model.parameters():
+        par = param.cpu().detach().numpy().flatten()
+        
+        # create or append weight to vector
+        if weigths is None:
+            weigths = par
+        else:
+            weigths = np.concatenate((weigths,par),axis=0)
+    
+    # Plot
+    plt.figure()
+    plt.hist(weigths,density=True); plt.grid()
+    plt.xlabel('Weights value'); plt.ylabel('Probability')
+    plt.title('Distribution of weights values')
+    
+    return weigths
+        
+
+
 
 
     
