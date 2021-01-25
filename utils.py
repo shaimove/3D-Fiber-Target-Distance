@@ -87,7 +87,8 @@ def Regularization(model, regularization_type=1, gamma=0.0001):
     
     # run over all model parametes and accumalate the norm of the weights
     for param in model.parameters():
-        norm += torch.norm(param,regularization_type)
+        if param.requires_grad == True:
+            norm += torch.norm(param,regularization_type)
     
     # multiply by coefficient
     loss = gamma * norm

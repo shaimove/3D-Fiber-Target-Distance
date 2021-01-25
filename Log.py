@@ -8,12 +8,13 @@ class TrackingLog(object):
     
     
     
-    def __init__(self,folder,image_resolution,image_stats):
+    def __init__(self,folder,image_resolution,mean,std):
         
         # define folder to save results and image resolution
         self.folder = folder
         self.image_resolution = image_resolution
-        self.image_stats = image_stats
+        self.mean = mean
+        self.std = std
         
         # define list of losses and epoch variable for training
         self.training_running_batch_loss = []
@@ -112,7 +113,7 @@ class TrackingLog(object):
     
     def SaveResultsLastEpoch(self,images,output,labels):
         # Step 1: Transform all the data to CPU and Numpy array
-        images = images.to('cpu').detach().numpy()
+        images = images.to('cpu').detach().permute(0,2,3,1).numpy()
         output = output.to('cpu').detach().numpy()
         labels = labels.to('cpu').detach().numpy()
         
@@ -132,13 +133,14 @@ class TrackingLog(object):
         # for every image, save prediction and true position in folder
         for i in range(num_of_img):
             # take image
-            img = images[i][0]
-            # multiply by std and ten add mean to get real image value
-            img = img * self.image_stats[1] + self.image_stats[0]
+            img = images[i]
+            
+            # multiply by std and then add mean to get real image value
+            for c in range(3):
+                img[:,:,c] = img[:,:,c] * self.std[c] + self.mean[c]
+            
             # convert to uint8
-            img = np.uint8(img*255)
-            # convert to BGR
-            img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+            img = cv2.cvtColor(np.uint8(img*255),cv2.COLOR_RGB2BGR)
             
             # Plot predications in Blue
             cv2.circle(img, (int(prediction[i,0]),int(prediction[i,1])),

@@ -34,7 +34,8 @@ class DatasetImage(Dataset):
         img_path = self.dataframe['path'].iloc[idx]
         
         # read the image
-        image = np.array(cv2.imread(img_path,0))
+        #image = np.array(cv2.imread(img_path,0))
+        image = np.array(cv2.cvtColor(cv2.imread(img_path),cv2.COLOR_BGR2RGB))
         
         # read coordinate
         x_tip = self.dataframe['X Coordinate'].iloc[idx]

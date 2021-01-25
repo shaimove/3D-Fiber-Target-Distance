@@ -8,7 +8,8 @@ from torch.utils import data
 from torchvision import transforms
 from torchsummary import summary
 
-import model
+#import model
+import model_transfer
 import utils
 import Log
 from Dataset import DatasetImage
@@ -26,8 +27,9 @@ data_train = data_table.sample(frac = 0.8)
 data_validation = data_table.drop(data_train.index)
 
 # calculate stats from training data
-mean,std = utils.CalculateStats(data_train,image_size)
-
+#mean,std = utils.CalculateStats(data_train,image_size)
+mean = [0.485, 0.456, 0.406] # for resnet18
+std = [0.229, 0.224, 0.225] # for resnet18
 
 #%% Step 2: Create dataset objects
 batch_size_train = 32
@@ -35,7 +37,7 @@ batch_size_validation = 32
 
 # define datatransforms
 transform = transforms.Compose([transforms.ToTensor(),
-    transforms.Normalize(mean=[mean],std=[std])])
+    transforms.Normalize(mean=mean,std=std)])
 
 # define dataset and dataloader for training
 train_dataset = DatasetImage(data_train,image_size,transform)
@@ -47,8 +49,8 @@ validation_loader = data.DataLoader(validation_dataset,batch_size=batch_size_val
 
 # Define logger parameters 
 model_name = 'Version 3-25_01_2021.pt'
-folder = '../Model 1.2/'
-Logger = Log.TrackingLog(folder,image_size,(mean,std))
+folder = '../Model 1.3/'
+Logger = Log.TrackingLog(folder,image_size,mean,std)
 
 
 #%% Step 3: Define model hyperparameters
@@ -57,7 +59,7 @@ Logger = Log.TrackingLog(folder,image_size,(mean,std))
 num_epochs = 20
 
 # load model
-model = model.TrackingModel().to(device)
+model = model_transfer.TrackingModel().to(device)
 utils.count_parameters(model)
 
 # send parameters to optimizer
