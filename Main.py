@@ -48,15 +48,15 @@ validation_dataset = DatasetImage(data_validation,image_size,transform)
 validation_loader = data.DataLoader(validation_dataset,batch_size=batch_size_validation,shuffle=True)
 
 # Define logger parameters 
-model_name = 'Version 3-25_01_2021.pt'
-folder = '../Model 1.3/'
+model_name = 'Version 3-26_01_2021.pt'
+folder = '../Model 3.3/'
 Logger = Log.TrackingLog(folder,image_size,mean,std)
 
 
 #%% Step 3: Define model hyperparameters
 
 # number of epochs
-num_epochs = 20
+num_epochs = 10
 
 # load model
 model = model_transfer.TrackingModel().to(device)
@@ -98,7 +98,7 @@ for epoch in range(num_epochs):
         loss = criterion(output,labels)
         
         # add L1 regularization
-        loss = loss + utils.Regularization(model,2,0.001)
+        #loss = loss + utils.Regularization(model,2,0.001)
         
         # backward: perform gradient descent of the loss w.r. to the model params
         loss.backward()
@@ -147,9 +147,7 @@ for epoch in range(num_epochs):
             Logger.BatchUpdate(mode='Validation',epoch=epoch,batch=i,loss=loss)
             i += 1 # update index for log of batchs 
             
-            # for last validation epoch, print predictions
-            if epoch == (num_epochs-1) and i == len(validation_loader):
-                Logger.SaveResultsLastEpoch(images,output,labels)
+                
                 
     #########################
     ## PRINT EPOCH RESULTS ##
@@ -165,6 +163,9 @@ for epoch in range(num_epochs):
  
 
 #%% Step 5: print results and save the model
+# save images for example
+Logger.SaveResultsLastEpoch(images,output,labels)
+
 # Plot Traing and Validation Loss graph
 Logger.PlotLoss()
 
@@ -175,10 +176,7 @@ weigths = utils.PlotWeightsHistogram(model)
 summary(model, images)
 
 # Svae the model
-PATH = folder + model_name
-torch.save({'num_epochs': num_epochs,
-            'model_state_dict': model.state_dict(),
-            'train_loss': Logger.training_loss_epoch,
-            'valid_loss': Logger.validation_loss_epoch}, PATH)
+#PATH = folder + model_name
+#torch.save({'model_state_dict': model.state_dict(), PATH)
 
 

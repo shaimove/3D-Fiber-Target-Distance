@@ -8,22 +8,10 @@ from torchvision import models
 class TrackingModel(nn.Module):
     def __init__(self,in_channels=1,img_size=(1024,1024),output=2):
         super().__init__()
-        # in_channels = 1, img_size = (1024,1024), output = 2
+        # in_channels = 3, img_size = (1024,1024), output = 2
         
-        # Import ResNet18
-        # from (N,1,1024,1024) to (N,64,512,512) to (N,64,256,256) to (N,128,128,128)
-        # to (N,256,64,64) to (N,512,32,32) 
-        model = models.resnet18(pretrained=True)
-        for param in model.parameters():
-            param.requires_grad = False
-            
-        # change adaptive average pooling to average pooling
-        # average pool from (N,512,32,32) to (512,16,16)
-        model.avgpool = nn.AvgPool2d(2,2)
-        model.fc = nn.Identity() # remove fc layer
-        
-        # define the modeified resnet18 
-        self.resnet18_pre = model
+        # define pre trained ResNet18, from (N,1,1024,1024) to (N,512,16,16) 
+        self.resnet18_pre = ResNet18()
         
         # from (N*131,072) to (N*64)
         self.linear1 = nn.Linear(in_channels*512*16*16, in_channels*64)
@@ -46,19 +34,20 @@ class TrackingModel(nn.Module):
     def _init_weights(self):
     # initiate with Xavier initialization
         for m in self.modules():
-            if type(m) in {nn.Conv2d,nn.Linear}:
-                # Weight of layers
-                nn.init.xavier_normal_(m.weight)
-                # if we have bias
-                if m.bias is not None:
-                    m.bias.data.fill_(0.01)  
-                        
-            if type(m) in {nn.BatchNorm2d}:
-                # Weight of layers
-                nn.init.normal_(m.weight)
-                # if we have bias
-                if m.bias is not None:
-                    m.bias.data.fill_(0.01) 
+            if m != self.resnet18_pre:
+                if type(m) in {nn.Conv2d,nn.Linear}:
+                    # Weight of layers
+                    nn.init.xavier_normal_(m.weight)
+                    # if we have bias
+                    if m.bias is not None:
+                        m.bias.data.fill_(0.01)  
+                                
+                if type(m) in {nn.BatchNorm2d}:
+                    # Weight of layers
+                    nn.init.normal_(m.weight)
+                    # if we have bias
+                    if m.bias is not None:
+                        m.bias.data.fill_(0.01) 
 
     def forward(self, X):
         X = self.resnet18_pre(X)
@@ -103,11 +92,32 @@ class ConvBlock(nn.Module):
         
         return X
 
+#%% Class ResNet18 Pretrained
+
+class ResNet18(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # from (N,1,1024,1024) to (N,64,512,512) to (N,64,256,256) to (N,128,128,128)
+        # to (N,256,64,64) to (N,512,32,32) 
+        # Import ResNet18 with trained weights
+        model = models.resnet18(pretrained=True)
+        
+        # freeze wieghts 
+        for param in model.parameters():
+            param.requires_grad = False
+        
+        # delete last two layers 
+        model.avgpool = nn.MaxPool2d(2,2)
+        model.fc = nn.Identity() 
+        
+        # define the modeified resnet18 
+        self.resnet18_pre = model 
 
 
-
-
-
+    def forward(self,X):
+        X = self.resnet18_pre(X)
+        
+        return X
 
 
 
