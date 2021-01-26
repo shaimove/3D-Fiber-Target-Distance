@@ -1,8 +1,5 @@
 # Main.py
-import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
-import cv2
 import torch
 from torch.utils import data
 from torchvision import transforms
@@ -27,9 +24,8 @@ data_train = data_table.sample(frac = 0.8)
 data_validation = data_table.drop(data_train.index)
 
 # calculate stats from training data
-#mean,std = utils.CalculateStats(data_train,image_size)
-mean = [0.485, 0.456, 0.406] # for resnet18
-std = [0.229, 0.224, 0.225] # for resnet18
+mean = [0.485, 0.456, 0.406] # for imagenet
+std = [0.229, 0.224, 0.225] # for imagenet
 
 #%% Step 2: Create dataset objects
 batch_size_train = 32
@@ -49,14 +45,13 @@ validation_loader = data.DataLoader(validation_dataset,batch_size=batch_size_val
 
 # Define logger parameters 
 model_name = 'Version 3-26_01_2021.pt'
-folder = '../Model 3.3/'
+folder = '../Resnet101 strong maxpool 50 epochs/'
 Logger = Log.TrackingLog(folder,image_size,mean,std)
 
 
 #%% Step 3: Define model hyperparameters
-
 # number of epochs
-num_epochs = 10
+num_epochs = 50
 
 # load model
 model = model_transfer.TrackingModel().to(device)
